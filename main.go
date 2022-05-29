@@ -15,7 +15,6 @@ import (
 type APIServer struct {
 	router         *mux.Router
 	pluginsManager *plugins.Manager
-	scheduler      *Scheduler
 }
 
 // NewAPIServer ...
@@ -54,9 +53,22 @@ func main() {
 	pluginsPathFlag = flag.String("pluginsPath", "plugins", "path to plugins")
 	sleepBetweenPluginUpdatesSec = flag.Int("sleepBetweenPluginUpdatesSec", 3, "pause in seconds between plugins updates")
 
-	pluginsManager, err := plugins.NewPluginsManager(*pluginsPathFlag, *sleepBetweenPluginUpdatesSec, pluginsConstructor)
+	router := mux.NewRouter()
+
+	pluginsConstructor := func(plugin *plugins.Plugin) plugins.IPlugin {
+		return &Plugin{
+			Plugin: plugin,
+			router: router,
+		}
+	}
+
+	pluginsManager, err := plugins.NewPluginsManager(*pluginsPathFlag, "*.js", *sleepBetweenPluginUpdatesSec, pluginsConstructor)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if err := pluginsManager.Start(); err != nil {
+		panic(err)
 	}
 
 	server := NewAPIServer(pluginsManager)

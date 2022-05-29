@@ -4,17 +4,14 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/gorilla/mux"
 	"github.com/mcfly722/goPackages/plugins"
 )
 
 // Plugin ...
 type Plugin struct {
 	*plugins.Plugin
-}
-
-// Constructor ...
-func pluginsConstructor(plugin *plugins.Plugin) plugins.IPlugin {
-	return &Plugin{Plugin: plugin}
+	router *mux.Router
 }
 
 // OnLoad ...
