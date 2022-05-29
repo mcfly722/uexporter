@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/mcfly722/goPackages/context"
@@ -12,10 +13,11 @@ import (
 )
 
 type apiServer struct {
-	logger *logger.Logger
-	router *mux.Router
-	done   chan bool
-	http   *http.Server
+	logger  *logger.Logger
+	router  *mux.Router
+	http    *http.Server
+	working sync.WaitGroup
+	done    chan bool
 }
 
 func (apiServer *apiServer) handlePluginsManager() http.HandlerFunc {
@@ -33,25 +35,34 @@ func newAPIServer(bindAddr string, log *logger.Logger) *apiServer {
 
 	done := make(chan bool)
 
+	var apiServer = &apiServer{
+		logger: log,
+		router: router,
+		http:   httpServer,
+		done:   done,
+	}
+
 	go func() {
+		log.LogEvent(logger.EventTypeInfo, "webServer", fmt.Sprintf("starting on %v", bindAddr))
+
+		apiServer.working.Add(1)
+
 		if err := httpServer.ListenAndServe(); err != nil {
 			if err == http.ErrServerClosed {
 				log.LogEvent(logger.EventTypeInfo, "webServer", err.Error())
 			} else {
 				log.LogEvent(logger.EventTypeException, "webServer", err.Error())
+				exitCode = 1
 			}
 		}
-		done <- true
+
+		go func() {
+			done <- true
+		}()
+
+		apiServer.working.Done()
+
 	}()
-
-	log.LogEvent(logger.EventTypeInfo, "webServer", fmt.Sprintf("starting on %v", bindAddr))
-
-	var apiServer = &apiServer{
-		logger: log,
-		router: router,
-		done:   done,
-		http:   httpServer,
-	}
 
 	router.HandleFunc("/", apiServer.handlePluginsManager())
 
@@ -73,5 +84,11 @@ loop:
 
 // Dispose ...
 func (apiServer *apiServer) Dispose() {
-	apiServer.http.Shutdown(originalContext.Background())
+
+	go func() {
+		apiServer.http.Shutdown(originalContext.Background())
+	}()
+
+	// wait till would be totally disposed
+	apiServer.working.Wait()
 }

@@ -4,7 +4,6 @@ import (
 	"flag"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/gorilla/mux"
 
@@ -25,12 +24,15 @@ var (
 	bindAddrFlag                 *string
 	pluginsPathFlag              *string
 	sleepBetweenPluginUpdatesSec *int
+	exitCode                     int
 )
 
 func main() {
 	bindAddrFlag = flag.String("bindAddr", "127.0.0.1:8080", "bind address")
 	pluginsPathFlag = flag.String("pluginsPath", "plugins", "path to plugins")
 	sleepBetweenPluginUpdatesSec = flag.Int("sleepBetweenPluginUpdatesSec", 3, "pause in seconds between plugins updates")
+
+	flag.Parse()
 
 	var log = logger.NewLogger(100)
 	log.SetOutputToConsole(true)
@@ -45,7 +47,7 @@ func main() {
 	go func() {
 		<-c
 		log.LogEvent(logger.EventTypeInfo, "webServer", "CTRL+C signal")
-		apiServer.done <- true
+		ctx.OnDone() <- true
 	}()
 
 	/*
@@ -64,6 +66,7 @@ func main() {
 
 	ctx.Wait()
 
-	time.Sleep(1 * time.Second)
 	log.LogEvent(logger.EventTypeInfo, "webServer", "finished")
+
+	os.Exit(exitCode)
 }

@@ -20,6 +20,8 @@ github.com/mcfly722/goPackages/context v0.0.0-20220529154758-eb6ab822f179 h1:u5q
 github.com/mcfly722/goPackages/context v0.0.0-20220529154758-eb6ab822f179/go.mod h1:pqlmKTAKdhoVI5V9aSj0eiaUFGCMVChuSon0Wyf1o94=
 github.com/mcfly722/goPackages/context v0.0.0-20220529191707-f82e36062aa0 h1:MmwiWhycc33giiQWs6xILyOG2MIuJeS+T5FOlMpVNdo=
 github.com/mcfly722/goPackages/context v0.0.0-20220529191707-f82e36062aa0/go.mod h1:pqlmKTAKdhoVI5V9aSj0eiaUFGCMVChuSon0Wyf1o94=
+github.com/mcfly722/goPackages/context v0.0.0-20220529194245-7d210e2ede48 h1:khx/MuXK183chRQG4OyhwPZjo1UkkMb4ulbuFSUj560=
+github.com/mcfly722/goPackages/context v0.0.0-20220529194245-7d210e2ede48/go.mod h1:pqlmKTAKdhoVI5V9aSj0eiaUFGCMVChuSon0Wyf1o94=
 github.com/mcfly722/goPackages/logger v0.0.0-20220529151635-5bdd56421d13 h1:FSdOrozbPwQ8DK6kyI3WFV7lpJ0aRkOZJS+sJIxf+u4=
 github.com/mcfly722/goPackages/logger v0.0.0-20220529151635-5bdd56421d13/go.mod h1:oAogjoZd5ANC5qV2pnpXM1IDgSCIcJFBWJNKN0HVSgQ=
 github.com/mcfly722/goPackages/plugins v0.0.0-20220410225137-563aa7aff292 h1:kaDYcofQPj96vv9E9DGBy7uJuY6j+t7YqCoUNakP47M=
