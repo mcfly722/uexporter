@@ -2,43 +2,23 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
 	"github.com/gorilla/mux"
+
+	"github.com/mcfly722/goPackages/context"
+	"github.com/mcfly722/goPackages/logger"
 	"github.com/mcfly722/goPackages/plugins"
 )
 
-// APIServer ...
-type APIServer struct {
+// Server ...
+type webServer struct {
+	logger         *logger.Logger
+	addr           string
 	router         *mux.Router
 	pluginsManager *plugins.Manager
-}
-
-// NewAPIServer ...
-func NewAPIServer(pluginsManager *plugins.Manager) *APIServer {
-	return &APIServer{
-		router:         mux.NewRouter(),
-		pluginsManager: pluginsManager,
-	}
-}
-
-// Start ...
-func (s *APIServer) Start(bindAddr string) error {
-	s.router.HandleFunc("/", s.handlePluginsManager())
-
-	log.Println(fmt.Sprintf("starting server on %v", bindAddr))
-	return http.ListenAndServe(bindAddr, s.router)
-}
-
-func (s *APIServer) handlePluginsManager() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		out := fmt.Sprintf("<html>%v</html>", s.pluginsManager.ToHTML())
-		io.WriteString(w, out)
-	}
 }
 
 var (
@@ -48,32 +28,42 @@ var (
 )
 
 func main() {
-
 	bindAddrFlag = flag.String("bindAddr", "127.0.0.1:8080", "bind address")
 	pluginsPathFlag = flag.String("pluginsPath", "plugins", "path to plugins")
 	sleepBetweenPluginUpdatesSec = flag.Int("sleepBetweenPluginUpdatesSec", 3, "pause in seconds between plugins updates")
 
-	router := mux.NewRouter()
+	var log = logger.NewLogger(100)
+	log.SetOutputToConsole(true)
 
-	pluginsConstructor := func(plugin *plugins.Plugin) plugins.IPlugin {
-		return &Plugin{
-			Plugin: plugin,
-			router: router,
+	var apiServer = newAPIServer(*bindAddrFlag, log)
+
+	ctx := context.NewContextFor(apiServer)
+
+	// handle ctrl+c for gracefully shutdown using context
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		log.LogEvent(logger.EventTypeInfo, "webServer", "CTRL+C signal")
+		apiServer.done <- true
+	}()
+
+	/*
+		pluginsConstructor := func(plugin *plugins.Plugin) plugins.IPlugin {
+			return &Plugin{
+				Plugin: plugin,
+				router: router,
+			}
 		}
-	}
 
-	pluginsManager, err := plugins.NewPluginsManager(*pluginsPathFlag, "*.js", *sleepBetweenPluginUpdatesSec, pluginsConstructor)
-	if err != nil {
-		log.Fatal(err)
-	}
+		pluginsManager, err := plugins.NewPluginsManager(ctx, *pluginsPathFlag, "*.js", *sleepBetweenPluginUpdatesSec, pluginsConstructor)
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
 
-	if err := pluginsManager.Start(); err != nil {
-		panic(err)
-	}
+	ctx.Wait()
 
-	server := NewAPIServer(pluginsManager)
-	if err := server.Start(*bindAddrFlag); err != nil {
-		log.Fatal(err)
-	}
-
+	time.Sleep(1 * time.Second)
+	log.LogEvent(logger.EventTypeInfo, "webServer", "finished")
 }
