@@ -2,16 +2,67 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
-	"os"
 
-	"github.com/dop251/goja"
-	"github.com/gorilla/mux"
 	"github.com/mcfly722/goPackages/logger"
-	"github.com/mcfly722/goPackages/plugins"
+	yaml "gopkg.in/yaml.v2"
 )
 
+// Plugin ...
+type Plugin struct {
+	Log *logger.Logger
+}
+
+// NewPlugin ...
+func NewPlugin() *Plugin {
+	log := logger.NewLogger(100)
+	log.SetOutputToConsole(true)
+	return &Plugin{
+		Log: log,
+	}
+}
+
+// YAMLConfig ...
+type YAMLConfig struct {
+	PluginName                  string            `yaml:"PluginName"`
+	Version                     string            `yaml:"Version"`
+	JSScripts                   []string          `yaml:"JSScripts"`
+	DefaultEnvironmentVariables map[string]string `yaml:"DefaultEnvironmentVariables"`
+}
+
+// OnLoad ...
+func (plugin *Plugin) OnLoad(relativeName string, body string) {
+	config := &YAMLConfig{}
+
+	err := yaml.Unmarshal([]byte(body), &config)
+	if err != nil {
+		plugin.Log.LogEvent(logger.EventTypeException, relativeName, err.Error())
+		return
+	}
+
+	plugin.Log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("PluginName                 : %v", config.PluginName))
+	plugin.Log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("Version                    : %v", config.Version))
+	plugin.Log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("JSScripts                  : %v", config.JSScripts))
+	plugin.Log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("DefaultEnvironmentVariables: %v", config.DefaultEnvironmentVariables))
+	plugin.Log.LogEvent(logger.EventTypeInfo, relativeName, "loaded")
+}
+
+// OnUpdate ...
+func (plugin *Plugin) OnUpdate(relativeName string, body string) {
+	log.Println(fmt.Sprintf("%v updated", relativeName))
+}
+
+// OnDispose ...
+func (plugin *Plugin) OnDispose(relativeName string) {
+	log.Println(fmt.Sprintf("%v uloaded", relativeName))
+}
+
+// UpdateRequired ...
+func (plugin *Plugin) UpdateRequired() bool {
+	return false
+}
+
+/*
 // Plugin ...
 type Plugin struct {
 	*plugins.Plugin
@@ -60,3 +111,5 @@ func (plugin *Plugin) OnUpdate() {
 func (plugin *Plugin) OnUnload() {
 	log.Println(fmt.Sprintf("uloaded plugin: %v", plugin.RelativeName))
 }
+
+*/

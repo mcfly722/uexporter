@@ -1,0 +1,8 @@
+PluginName: Test1
+Version: 1.0
+JSScripts:
+  - /test.js
+  - /test2.js
+DefaultEnvironmentVariables:
+  INTERVAL: 1
+  SPREAD_INITIALIZATION_INTERVAL: 2
