@@ -47,7 +47,7 @@ func main() {
 		return NewPlugin()
 	}
 
-	pluginsManager, err := plugins.NewPluginsManager("", "*.yaml", 3, pluginsConstructor)
+	pluginsManager, err := plugins.NewPluginsManager(*pluginsPathFlag, "*.yaml", 3, pluginsConstructor)
 	if err != nil {
 		log.LogEvent(logger.EventTypeException, "pluginsManager", err.Error())
 		ctx.OnDone() <- true

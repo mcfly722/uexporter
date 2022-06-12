@@ -4,9 +4,9 @@ go 1.17
 
 require (
 	github.com/gorilla/mux v1.8.0
-	github.com/mcfly722/goPackages/context v0.0.0-20220529194245-7d210e2ede48
-	github.com/mcfly722/goPackages/logger v0.0.0-20220529194245-7d210e2ede48
-	github.com/mcfly722/goPackages/plugins v0.0.0-20220612145419-9eaeadee50b9
+	github.com/mcfly722/goPackages/context v0.0.0-20220612213827-253650e69bb2
+	github.com/mcfly722/goPackages/logger v0.0.0-20220612213827-253650e69bb2
+	gopkg.in/yaml.v2 v2.4.0
 )
 
-require gopkg.in/yaml.v2 v2.4.0 // indirect
+require github.com/mcfly722/goPackages/plugins v0.0.0-20220612213827-253650e69bb2

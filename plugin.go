@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/mcfly722/goPackages/logger"
 	yaml "gopkg.in/yaml.v2"
@@ -10,7 +12,8 @@ import (
 
 // Plugin ...
 type Plugin struct {
-	Log *logger.Logger
+	log       *logger.Logger
+	jsScripts map[string]time.Time
 }
 
 // NewPlugin ...
@@ -18,7 +21,8 @@ func NewPlugin() *Plugin {
 	log := logger.NewLogger(100)
 	log.SetOutputToConsole(true)
 	return &Plugin{
-		Log: log,
+		log:       log,
+		jsScripts: make(map[string]time.Time),
 	}
 }
 
@@ -30,86 +34,75 @@ type YAMLConfig struct {
 	DefaultEnvironmentVariables map[string]string `yaml:"DefaultEnvironmentVariables"`
 }
 
-// OnLoad ...
-func (plugin *Plugin) OnLoad(relativeName string, body string) {
+func (plugin *Plugin) load(pluginsFullPath string, relativeName string, body string) error {
+
+	pluginRootPath := filepath.Dir(filepath.Join(pluginsFullPath, relativeName))
+
 	config := &YAMLConfig{}
 
 	err := yaml.Unmarshal([]byte(body), &config)
 	if err != nil {
-		plugin.Log.LogEvent(logger.EventTypeException, relativeName, err.Error())
-		return
+		plugin.log.LogEvent(logger.EventTypeException, relativeName, err.Error())
+		return err
 	}
 
-	plugin.Log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("PluginName                 : %v", config.PluginName))
-	plugin.Log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("Version                    : %v", config.Version))
-	plugin.Log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("JSScripts                  : %v", config.JSScripts))
-	plugin.Log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("DefaultEnvironmentVariables: %v", config.DefaultEnvironmentVariables))
-	plugin.Log.LogEvent(logger.EventTypeInfo, relativeName, "loaded")
-}
+	/*
+		plugin.log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("PluginName                 : %v", config.PluginName))
+		plugin.log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("Version                    : %v", config.Version))
+		plugin.log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("JSScripts                  : %v", config.JSScripts))
+		plugin.log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("DefaultEnvironmentVariables: %v", config.DefaultEnvironmentVariables))
+	*/
+	plugin.jsScripts = make(map[string]time.Time)
 
-// OnUpdate ...
-func (plugin *Plugin) OnUpdate(relativeName string, body string) {
-	log.Println(fmt.Sprintf("%v updated", relativeName))
-}
+	for _, jsScript := range config.JSScripts {
+		fullFilePath := filepath.Join(pluginRootPath, jsScript)
+		file, err := os.Stat(fullFilePath)
+		if err != nil {
+			plugin.log.LogEvent(logger.EventTypeException, relativeName, err.Error())
+			return err
+		}
+		plugin.jsScripts[jsScript] = file.ModTime()
+	}
 
-// OnDispose ...
-func (plugin *Plugin) OnDispose(relativeName string) {
-	log.Println(fmt.Sprintf("%v uloaded", relativeName))
-}
+	plugin.log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("JSScripts: %v", plugin.jsScripts))
 
-// UpdateRequired ...
-func (plugin *Plugin) UpdateRequired() bool {
-	return false
-}
-
-/*
-// Plugin ...
-type Plugin struct {
-	*plugins.Plugin
-	logger *logger.Logger
-	router *mux.Router
+	return nil
 }
 
 // OnLoad ...
-func (plugin *Plugin) OnLoad() {
-	plugin.logger = logger.NewLogger(30)
-
-	file, err := os.Open(plugin.RelativeName)
-	if err != nil {
-		plugin.logger.LogEvent(logger.EventTypeException, plugin.RelativeName, "could not open file for reading")
-		return
+func (plugin *Plugin) OnLoad(pluginsFullPath string, relativeName string, body string) {
+	if plugin.load(pluginsFullPath, relativeName, body) == nil {
+		plugin.log.LogEvent(logger.EventTypeInfo, relativeName, "loaded")
 	}
-
-	defer func() {
-		if err = file.Close(); err != nil {
-			plugin.logger.LogEvent(logger.EventTypeException, plugin.RelativeName, "could close file after reading")
-		}
-	}()
-
-	body, err := ioutil.ReadAll(file)
-	if err != nil {
-		plugin.logger.LogEvent(logger.EventTypeException, plugin.RelativeName, "could not read file")
-		return
-	}
-
-	vm := goja.New()
-	_, err = vm.RunString(string(body))
-	if err != nil {
-		plugin.logger.LogEvent(logger.EventTypeException, plugin.RelativeName, err.Error())
-		return
-	}
-
-	log.Println(fmt.Sprintf("loaded plugin: %v", plugin.RelativeName))
 }
 
 // OnUpdate ...
-func (plugin *Plugin) OnUpdate() {
-	log.Println(fmt.Sprintf("updated plugin: %v", plugin.RelativeName))
+func (plugin *Plugin) OnUpdate(pluginsFullPath string, relativeName string, body string) {
+	if plugin.load(pluginsFullPath, relativeName, body) == nil {
+		plugin.log.LogEvent(logger.EventTypeInfo, relativeName, "updated")
+	}
 }
 
-// OnUnload ...
-func (plugin *Plugin) OnUnload() {
-	log.Println(fmt.Sprintf("uloaded plugin: %v", plugin.RelativeName))
+// OnDispose ...
+func (plugin *Plugin) OnDispose(pluginsFullPath string, relativeName string) {
+	plugin.log.LogEvent(logger.EventTypeInfo, relativeName, "disposed")
 }
 
-*/
+// UpdateRequired ...
+func (plugin *Plugin) UpdateRequired(pluginsFullPath string, relativeName string) bool {
+
+	pluginRootPath := filepath.Dir(filepath.Join(pluginsFullPath, relativeName))
+
+	{ // check all jsScripts for changes, if one of scripts has been changed, we need plugin update
+		for jsScript, lastModTime := range plugin.jsScripts {
+			file, err := os.Stat(filepath.Join(pluginRootPath, jsScript))
+			if err != nil {
+				return true
+			}
+			if file.ModTime() != lastModTime {
+				return true
+			}
+		}
+	}
+	return false
+}
