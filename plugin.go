@@ -47,6 +47,7 @@ func (plugin *Plugin) load(pluginsFullPath string, relativeName string, body str
 	}
 
 	plugin.jsRuntime.AddAPI(NewJSConsole(relativeName, plugin.log))
+	plugin.jsRuntime.AddAPI(NewJSScheduler(relativeName, plugin.log))
 
 	pluginRootPath := filepath.Dir(filepath.Join(pluginsFullPath, relativeName))
 

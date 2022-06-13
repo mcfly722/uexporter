@@ -56,9 +56,10 @@ loop:
 		select {
 		case callback := <-jsRuntime.callbacks:
 			_, err := (*callback.function)(nil, callback.args...)
-			if err != nil {
+			if err != nil { // here error does not fired!!! need additional check when exception in handler occur
 				jsRuntime.CallHandlerException(err)
 			}
+			break
 		case <-current.OnDone():
 			break loop
 		}
@@ -75,7 +76,20 @@ func (jsRuntime *JSRuntime) Dispose() {
 	jsRuntime.logger.LogEvent(logger.EventTypeInfo, "jsRuntime", fmt.Sprintf("%v disposed", jsRuntime.name))
 }
 
+// CallHandler ...
+func (jsRuntime *JSRuntime) CallHandler(function *goja.Callable, args ...goja.Value) {
+	jsRuntime.callbacks <- &callback{
+		function: function,
+		args:     args,
+	}
+}
+
 // CallHandlerException ...
 func (jsRuntime *JSRuntime) CallHandlerException(err error) {
-	jsRuntime.logger.LogEvent(logger.EventTypeInfo, "jsRuntime", fmt.Sprintf("issued handler exception: %v", err))
+	jsRuntime.logger.LogEvent(logger.EventTypeException, "jsRuntime", fmt.Sprintf("issued handler exception: %v", err))
+}
+
+// Throw ...
+func (jsRuntime *JSRuntime) Throw(msg string) {
+	panic(jsRuntime.VM.ToValue(msg))
 }
