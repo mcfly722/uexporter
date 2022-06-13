@@ -18,18 +18,6 @@ var (
 	exitCode                     int
 )
 
-type root struct{}
-
-func (root *root) Go(current context.Context) {
-loop:
-	for {
-		select {
-		case <-current.OnDone():
-			break loop
-		}
-	}
-}
-
 func main() {
 	bindAddrFlag = flag.String("bindAddr", "127.0.0.1:8080", "bind address")
 	pluginsPathFlag = flag.String("pluginsPath", "plugins", "path to plugins")
@@ -40,8 +28,11 @@ func main() {
 	var log = logger.NewLogger(100)
 	log.SetOutputToConsole(true)
 
+	rootContext := context.NewRootContext()
+	defer rootContext.Terminate()
+
 	var apiServer = newAPIServer(*bindAddrFlag, log)
-	ctx := context.NewContextFor(apiServer)
+	apiServerContext := rootContext.NewContextFor(apiServer)
 
 	pluginsConstructor := func() plugins.IPlugin {
 		return NewPlugin()
@@ -50,11 +41,11 @@ func main() {
 	pluginsManager, err := plugins.NewPluginsManager(*pluginsPathFlag, "*.yaml", 3, pluginsConstructor)
 	if err != nil {
 		log.LogEvent(logger.EventTypeException, "pluginsManager", err.Error())
-		ctx.OnDone() <- true
 	} else {
 
 		pluginsManager.SetLogger(log)
-		ctx.NewContextFor(pluginsManager)
+
+		apiServerContext.NewContextFor(pluginsManager)
 
 		// handle ctrl+c for gracefully shutdown using context
 		c := make(chan os.Signal, 1)
@@ -62,11 +53,12 @@ func main() {
 		go func() {
 			<-c
 			log.LogEvent(logger.EventTypeInfo, "main", "CTRL+C signal")
-			ctx.OnDone() <- true
+			rootContext.Terminate()
 		}()
+
 	}
 
-	ctx.Wait()
+	rootContext.Wait()
 
 	log.LogEvent(logger.EventTypeInfo, "main", fmt.Sprintf("finished exitCode=%v", exitCode))
 

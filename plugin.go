@@ -1,25 +1,28 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/mcfly722/goPackages/context"
 	"github.com/mcfly722/goPackages/logger"
 	yaml "gopkg.in/yaml.v2"
 )
 
 // Plugin ...
 type Plugin struct {
-	log       *logger.Logger
-	jsScripts map[string]time.Time
+	log         *logger.Logger
+	jsScripts   map[string]time.Time
+	jsRuntime   *JSRuntime
+	rootContext context.RootContext
 }
 
 // NewPlugin ...
 func NewPlugin() *Plugin {
 	log := logger.NewLogger(100)
 	log.SetOutputToConsole(true)
+
 	return &Plugin{
 		log:       log,
 		jsScripts: make(map[string]time.Time),
@@ -35,6 +38,13 @@ type YAMLConfig struct {
 }
 
 func (plugin *Plugin) load(pluginsFullPath string, relativeName string, body string) error {
+
+	{ // start jsRuntime anyway
+		plugin.rootContext = context.NewRootContext()
+		plugin.jsRuntime = NewJSRuntime(relativeName)
+		plugin.jsRuntime.SetLogger(plugin.log)
+		plugin.rootContext.NewContextFor(plugin.jsRuntime)
+	}
 
 	pluginRootPath := filepath.Dir(filepath.Join(pluginsFullPath, relativeName))
 
@@ -64,13 +74,14 @@ func (plugin *Plugin) load(pluginsFullPath string, relativeName string, body str
 		plugin.jsScripts[jsScript] = file.ModTime()
 	}
 
-	plugin.log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("JSScripts: %v", plugin.jsScripts))
+	//	plugin.log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("JSScripts: %v", plugin.jsScripts))
 
 	return nil
 }
 
 // OnLoad ...
 func (plugin *Plugin) OnLoad(pluginsFullPath string, relativeName string, body string) {
+	plugin.log.LogEvent(logger.EventTypeInfo, relativeName, "loading")
 	if plugin.load(pluginsFullPath, relativeName, body) == nil {
 		plugin.log.LogEvent(logger.EventTypeInfo, relativeName, "loaded")
 	}
@@ -78,6 +89,8 @@ func (plugin *Plugin) OnLoad(pluginsFullPath string, relativeName string, body s
 
 // OnUpdate ...
 func (plugin *Plugin) OnUpdate(pluginsFullPath string, relativeName string, body string) {
+	plugin.log.LogEvent(logger.EventTypeInfo, relativeName, "updating")
+	plugin.rootContext.Terminate()
 	if plugin.load(pluginsFullPath, relativeName, body) == nil {
 		plugin.log.LogEvent(logger.EventTypeInfo, relativeName, "updated")
 	}
@@ -85,6 +98,8 @@ func (plugin *Plugin) OnUpdate(pluginsFullPath string, relativeName string, body
 
 // OnDispose ...
 func (plugin *Plugin) OnDispose(pluginsFullPath string, relativeName string) {
+	plugin.log.LogEvent(logger.EventTypeInfo, relativeName, "disposing")
+	plugin.rootContext.Terminate()
 	plugin.log.LogEvent(logger.EventTypeInfo, relativeName, "disposed")
 }
 
