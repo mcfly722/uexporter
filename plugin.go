@@ -46,6 +46,8 @@ func (plugin *Plugin) load(pluginsFullPath string, relativeName string, body str
 		plugin.rootContext.NewContextFor(plugin.jsRuntime)
 	}
 
+	plugin.jsRuntime.AddAPI(NewJSConsole(relativeName, plugin.log))
+
 	pluginRootPath := filepath.Dir(filepath.Join(pluginsFullPath, relativeName))
 
 	config := &YAMLConfig{}
@@ -56,12 +58,6 @@ func (plugin *Plugin) load(pluginsFullPath string, relativeName string, body str
 		return err
 	}
 
-	/*
-		plugin.log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("PluginName                 : %v", config.PluginName))
-		plugin.log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("Version                    : %v", config.Version))
-		plugin.log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("JSScripts                  : %v", config.JSScripts))
-		plugin.log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("DefaultEnvironmentVariables: %v", config.DefaultEnvironmentVariables))
-	*/
 	plugin.jsScripts = make(map[string]time.Time)
 
 	for _, jsScript := range config.JSScripts {
@@ -72,9 +68,20 @@ func (plugin *Plugin) load(pluginsFullPath string, relativeName string, body str
 			return err
 		}
 		plugin.jsScripts[jsScript] = file.ModTime()
-	}
 
-	//	plugin.log.LogEvent(logger.EventTypeInfo, relativeName, fmt.Sprintf("JSScripts: %v", plugin.jsScripts))
+		data, err := os.ReadFile(fullFilePath)
+		if err != nil {
+			plugin.log.LogEvent(logger.EventTypeException, relativeName, err.Error())
+			return err
+		}
+
+		_, err = plugin.jsRuntime.VM.RunString(string(data))
+		if err != nil {
+			plugin.log.LogEvent(logger.EventTypeException, relativeName, err.Error())
+			return err
+		}
+
+	}
 
 	return nil
 }

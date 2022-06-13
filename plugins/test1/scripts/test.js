@@ -1,1 +1,1 @@
-1ECHO is on.
+Console.log("test.js script started","qwe")
