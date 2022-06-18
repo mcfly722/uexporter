@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 
@@ -14,7 +15,14 @@ var (
 	pluginsPathFlag              *string
 	sleepBetweenPluginUpdatesSec *int
 	exitCode                     int
+	exitException                string
 )
+
+// LogExitError ...
+func logExitError(err error) {
+	exitCode = 1
+	exitException = err.Error()
+}
 
 func main() {
 	bindAddrFlag = flag.String("bindAddr", "127.0.0.1:8080", "bind address")
@@ -24,12 +32,13 @@ func main() {
 	flag.Parse()
 
 	ctrlC := make(chan os.Signal, 1)
-	apiServerError := make(chan error, 1)
 
 	rootContext := context.NewRootContext(context.NewConsoleLogDebugger())
 
 	var apiServer = NewAPIServer(*bindAddrFlag, func(err error) {
-		apiServerError <- err
+		rootContext.Log(2, err.Error())
+		logExitError(err)
+		rootContext.Terminate()
 	})
 
 	pluginsProvider := plugins.NewPluginsFromFilesProvider(*pluginsPathFlag, "*.yaml")
@@ -47,16 +56,8 @@ func main() {
 		}()
 	}
 
-	{ // of http server error occurs, shutdown using context
-		go func() {
-			err := <-apiServerError
-			rootContext.Log(2, err.Error())
-			rootContext.Terminate()
-			exitCode = 1
-		}()
-	}
-
 	rootContext.Wait()
 
+	rootContext.Log(0, fmt.Sprintf("exitCode=%v %v", exitCode, exitException))
 	os.Exit(exitCode)
 }
