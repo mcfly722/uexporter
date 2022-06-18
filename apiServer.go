@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/mcfly722/goPackages/context"
-	"github.com/mcfly722/goPackages/logger"
 )
 
+// OnErrorHandler ...
+type OnErrorHandler func(err error)
+
 type apiServer struct {
-	logger  *logger.Logger
-	router  *mux.Router
-	http    *http.Server
-	working sync.WaitGroup
-	done    chan bool
+	router         *mux.Router
+	httpServer     *http.Server
+	error          chan error
+	onErrorHandler OnErrorHandler
 }
 
 func (apiServer *apiServer) handlePluginsManager() http.HandlerFunc {
@@ -27,42 +27,18 @@ func (apiServer *apiServer) handlePluginsManager() http.HandlerFunc {
 	}
 }
 
-func newAPIServer(bindAddr string, log *logger.Logger) *apiServer {
+// NewAPIServer ...
+func NewAPIServer(bindAddr string, onErrorHandler OnErrorHandler) context.ContextedInstance {
 
 	router := mux.NewRouter()
-
 	httpServer := &http.Server{Addr: bindAddr, Handler: router}
 
-	done := make(chan bool)
-
-	var apiServer = &apiServer{
-		logger: log,
-		router: router,
-		http:   httpServer,
-		done:   done,
+	apiServer := &apiServer{
+		router:         router,
+		httpServer:     httpServer,
+		error:          make(chan error),
+		onErrorHandler: onErrorHandler,
 	}
-
-	go func() {
-		log.LogEvent(logger.EventTypeInfo, "webServer", fmt.Sprintf("starting on %v", bindAddr))
-
-		apiServer.working.Add(1)
-
-		if err := httpServer.ListenAndServe(); err != nil {
-			if err == http.ErrServerClosed {
-				log.LogEvent(logger.EventTypeInfo, "webServer", err.Error())
-			} else {
-				log.LogEvent(logger.EventTypeException, "webServer", err.Error())
-				exitCode = 1
-			}
-		}
-
-		go func() {
-			done <- true
-		}()
-
-		apiServer.working.Done()
-
-	}()
 
 	router.HandleFunc("/", apiServer.handlePluginsManager())
 
@@ -71,10 +47,20 @@ func newAPIServer(bindAddr string, log *logger.Logger) *apiServer {
 
 // Go ...
 func (apiServer *apiServer) Go(current context.Context) {
+
+	go func() {
+		if err := apiServer.httpServer.ListenAndServe(); err != nil {
+			if err != http.ErrServerClosed {
+				apiServer.error <- err
+			}
+		}
+	}()
+
 loop:
 	for {
 		select {
-		case <-apiServer.done:
+		case err := <-apiServer.error:
+			apiServer.onErrorHandler(err)
 			break loop
 		case <-current.OnDone():
 			break loop
@@ -83,12 +69,8 @@ loop:
 }
 
 // Dispose ...
-func (apiServer *apiServer) Dispose() {
+func (apiServer *apiServer) Dispose(current context.Context) {
 
-	go func() {
-		apiServer.http.Shutdown(originalContext.Background())
-	}()
+	apiServer.httpServer.Shutdown(originalContext.Background())
 
-	// wait till would be totally disposed
-	apiServer.working.Wait()
 }

@@ -2,12 +2,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 
 	"github.com/mcfly722/goPackages/context"
-	"github.com/mcfly722/goPackages/logger"
 	"github.com/mcfly722/goPackages/plugins"
 )
 
@@ -25,42 +23,40 @@ func main() {
 
 	flag.Parse()
 
-	var log = logger.NewLogger(100)
-	log.SetOutputToConsole(true)
+	ctrlC := make(chan os.Signal, 1)
+	apiServerError := make(chan error, 1)
 
-	rootContext := context.NewRootContext()
-	defer rootContext.Terminate()
+	rootContext := context.NewRootContext(context.NewConsoleLogDebugger())
 
-	var apiServer = newAPIServer(*bindAddrFlag, log)
-	apiServerContext := rootContext.NewContextFor(apiServer)
+	var apiServer = NewAPIServer(*bindAddrFlag, func(err error) {
+		apiServerError <- err
+	})
 
-	pluginsConstructor := func() plugins.IPlugin {
-		return NewPlugin()
-	}
+	pluginsProvider := plugins.NewPluginsFromFilesProvider(*pluginsPathFlag, "*.yaml")
+	pluginsManager := plugins.NewPluginsManager(pluginsProvider, 3, newPlugin)
 
-	pluginsManager, err := plugins.NewPluginsManager(*pluginsPathFlag, "*.yaml", 3, pluginsConstructor)
-	if err != nil {
-		log.LogEvent(logger.EventTypeException, "pluginsManager", err.Error())
-	} else {
+	apiServerContext := rootContext.NewContextFor(apiServer, *bindAddrFlag, "apiServer")
+	apiServerContext.NewContextFor(pluginsManager, "pluginsManager", "pluginsManager")
 
-		pluginsManager.SetLogger(log)
-
-		apiServerContext.NewContextFor(pluginsManager)
-
-		// handle ctrl+c for gracefully shutdown using context
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt)
+	{ // handle ctrl+c for gracefully shutdown using context
+		signal.Notify(ctrlC, os.Interrupt)
 		go func() {
-			<-c
-			log.LogEvent(logger.EventTypeInfo, "main", "CTRL+C signal")
+			<-ctrlC
+			rootContext.Log(2, "CTRL+C signal")
 			rootContext.Terminate()
 		}()
+	}
 
+	{ // of http server error occurs, shutdown using context
+		go func() {
+			err := <-apiServerError
+			rootContext.Log(2, err.Error())
+			rootContext.Terminate()
+			exitCode = 1
+		}()
 	}
 
 	rootContext.Wait()
-
-	log.LogEvent(logger.EventTypeInfo, "main", fmt.Sprintf("finished exitCode=%v", exitCode))
 
 	os.Exit(exitCode)
 }
