@@ -1,3 +1,7 @@
+console.log("initialized")
+
+
+/*
 var count1 = 0
 timerId1 = setInterval(function(){
 	Console.log("timer1="+count1)
@@ -23,3 +27,4 @@ timerId2 = setInterval(function(){
 },600,500)
 
 clearInterval(23)
+*/

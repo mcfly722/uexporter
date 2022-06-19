@@ -45,7 +45,7 @@ func main() {
 	pluginsManager := plugins.NewPluginsManager(pluginsProvider, 3, newPlugin)
 
 	apiServerContext := rootContext.NewContextFor(apiServer, *bindAddrFlag, "apiServer")
-	apiServerContext.NewContextFor(pluginsManager, "pluginsManager", "pluginsManager")
+	apiServerContext.NewContextFor(pluginsManager, *pluginsPathFlag, "pluginsManager")
 
 	{ // handle ctrl+c for gracefully shutdown using context
 		signal.Notify(ctrlC, os.Interrupt)
