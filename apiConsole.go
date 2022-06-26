@@ -14,7 +14,7 @@ func apiConsole(context context.Context, eventLoop *eventLoop, runtime *goja.Run
 
 	log := runtime.NewObject()
 	log.Set("log", func(msg string) {
-		context.Log(0, msg)
+		context.Log(50, msg)
 	})
 
 	runtime.Set("console", log)

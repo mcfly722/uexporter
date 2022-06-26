@@ -61,7 +61,6 @@ loop:
 		select {
 		case err := <-apiServer.error:
 			apiServer.onErrorHandler(err)
-			current.Cancel()
 			break
 		case _, opened := <-current.Opened():
 			if !opened {
@@ -69,11 +68,5 @@ loop:
 			}
 		}
 	}
-}
-
-// Dispose ...
-func (apiServer *apiServer) Dispose(current context.Context) {
-
 	apiServer.httpServer.Shutdown(originalContext.Background())
-
 }

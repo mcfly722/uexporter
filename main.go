@@ -33,31 +33,32 @@ func main() {
 
 	ctrlC := make(chan os.Signal, 1)
 
-	rootContext := context.NewRootContext(context.NewConsoleLogDebugger())
+	rootContext := context.NewRootContext(context.NewConsoleLogDebugger(100, true))
 
 	var apiServer = NewAPIServer(*bindAddrFlag, func(err error) {
 		rootContext.Log(2, err.Error())
 		logExitError(err)
 		rootContext.Cancel()
-		rootContext.Wait()
 	})
 
 	pluginsProvider := plugins.NewPluginsFromFilesProvider(*pluginsPathFlag, "*.yaml")
 	pluginsManager := plugins.NewPluginsManager(pluginsProvider, 3, newPlugin)
 
-	apiServerContext, _ := rootContext.NewContextFor(apiServer, *bindAddrFlag, "apiServer")
-	apiServerContext.NewContextFor(pluginsManager, *pluginsPathFlag, "pluginsManager")
-
-	{ // handle ctrl+c for gracefully shutdown using context
-		signal.Notify(ctrlC, os.Interrupt)
-		go func() {
-			<-ctrlC
-			rootContext.Log(2, "CTRL+C signal")
-			rootContext.Cancel()
-		}()
+	apiServerContext, err := rootContext.NewContextFor(apiServer, *bindAddrFlag, "apiServer")
+	if err == nil {
+		_, err = apiServerContext.NewContextFor(pluginsManager, *pluginsPathFlag, "pluginsManager")
+		if err == nil {
+			{ // handle ctrl+c for gracefully shutdown using context
+				signal.Notify(ctrlC, os.Interrupt)
+				go func() {
+					<-ctrlC
+					rootContext.Log(2, "CTRL+C signal")
+					rootContext.Cancel()
+				}()
+			}
+			rootContext.Wait()
+		}
 	}
-
-	rootContext.Wait()
 
 	rootContext.Log(0, fmt.Sprintf("exitCode=%v %v", exitCode, exitException))
 	os.Exit(exitCode)

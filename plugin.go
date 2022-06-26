@@ -44,32 +44,34 @@ func (plugin *plugin) Go(current context.Context) {
 		if err != nil {
 			current.Log(1, err.Error())
 			return
-		} else {
-			current.Log(1, fmt.Sprintf("%v loaded", resource))
 		}
 		scripts = append(scripts, newScript(resource, string(*body)))
+		current.Log(101, fmt.Sprintf("%v loaded", resource))
 	}
 
 	eventLoop := newEventLoop(goja.New(), scripts)
 	eventLoop.addAPI(apiConsole)
 
-	current.NewContextFor(eventLoop, config.PluginName, "eventLoop")
-
-loop:
-	for {
-		select {
-		case <-time.After(1 * time.Second):
-			if plugin.definition.Outdated() {
-				current.Cancel()
+	_, err = current.NewContextFor(eventLoop, config.PluginName, "eventLoop")
+	if err != nil {
+		current.Log(105, "NewContextFor", "skipping")
+	} else {
+		current.Log(101, "loop started")
+	loop:
+		for {
+			select {
+			case <-time.After(1 * time.Second):
+				if plugin.definition.Outdated() {
+					current.Cancel()
+					break
+				}
 				break
-			}
-			break
-		case _, opened := <-current.Opened():
-			if !opened {
-				break loop
+			case _, opened := <-current.Opened():
+				if !opened {
+					break loop
+				}
 			}
 		}
 	}
-}
 
-func (plugin *plugin) Dispose(current context.Context) {}
+}
