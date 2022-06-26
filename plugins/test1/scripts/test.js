@@ -1,4 +1,9 @@
-console.log("initialized")
+
+timerId1 = setInterval(function(){
+	console.log("timer1")
+},1000)
+
+console.log("timer with id=" + timerId1 + " initialized")
 
 
 /*

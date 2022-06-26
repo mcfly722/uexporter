@@ -9,9 +9,15 @@ import (
 
 type apiConstructor func(context context.Context, eventLoop *eventLoop, runtime *goja.Runtime)
 
-type callback struct {
-	function *goja.Callable
-	args     []goja.Value
+type result struct {
+	value goja.Value
+	err   error
+}
+
+type handler struct {
+	function      *goja.Callable
+	args          []goja.Value
+	resultChannel chan result
 }
 
 type script struct {
@@ -27,9 +33,10 @@ func newScript(name string, body string) *script {
 }
 
 type eventLoop struct {
-	runtime *goja.Runtime
-	apis    []apiConstructor
-	scripts []*script
+	runtime  *goja.Runtime
+	apis     []apiConstructor
+	scripts  []*script
+	handlers chan *handler
 }
 
 func (eventLoop *eventLoop) addAPI(api apiConstructor) {
@@ -38,9 +45,10 @@ func (eventLoop *eventLoop) addAPI(api apiConstructor) {
 
 func newEventLoop(runtime *goja.Runtime, scripts []*script) *eventLoop {
 	eventLoop := &eventLoop{
-		runtime: runtime,
-		apis:    []apiConstructor{},
-		scripts: scripts,
+		runtime:  runtime,
+		apis:     []apiConstructor{},
+		scripts:  scripts,
+		handlers: make(chan *handler),
 	}
 
 	return eventLoop
@@ -64,6 +72,16 @@ func (eventLoop *eventLoop) Go(current context.Context) {
 loop:
 	for {
 		select {
+
+		case handler := <-eventLoop.handlers:
+			value, err := (*handler.function)(nil, handler.args...)
+
+			handler.resultChannel <- result{
+				value: value,
+				err:   err,
+			}
+
+			break
 		case _, opened := <-current.Opened():
 			if !opened {
 				break loop
@@ -72,5 +90,17 @@ loop:
 	}
 }
 
-// Dispose ...
-func (eventLoop *eventLoop) Dispose(current context.Context) {}
+func (eventLoop *eventLoop) Call(function *goja.Callable, args ...goja.Value) (goja.Value, error) {
+
+	results := make(chan result)
+
+	eventLoop.handlers <- &handler{
+		function:      function,
+		args:          args,
+		resultChannel: results,
+	}
+
+	result := <-results
+
+	return result.value, result.err
+}

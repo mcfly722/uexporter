@@ -51,6 +51,7 @@ func (plugin *plugin) Go(current context.Context) {
 
 	eventLoop := newEventLoop(goja.New(), scripts)
 	eventLoop.addAPI(apiConsole)
+	eventLoop.addAPI(apiScheduler)
 
 	_, err = current.NewContextFor(eventLoop, config.PluginName, "eventLoop")
 	if err != nil {
