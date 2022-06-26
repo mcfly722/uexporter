@@ -5,8 +5,8 @@ go 1.17
 require (
 	github.com/dop251/goja v0.0.0-20220516123900-4418d4575a41
 	github.com/gorilla/mux v1.8.0
-	github.com/mcfly722/goPackages/context v0.0.0-20220619140431-c8e4095cec0f
-	github.com/mcfly722/goPackages/plugins v0.0.0-20220619191111-b205a52907a2
+	github.com/mcfly722/goPackages/context v0.0.0-20220623201403-cc598b1f2fde
+	github.com/mcfly722/goPackages/plugins v0.0.0-20220623201403-cc598b1f2fde
 	gopkg.in/yaml.v2 v2.4.0
 )
 

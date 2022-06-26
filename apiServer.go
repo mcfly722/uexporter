@@ -61,9 +61,12 @@ loop:
 		select {
 		case err := <-apiServer.error:
 			apiServer.onErrorHandler(err)
-			break loop
-		case <-current.OnDone():
-			break loop
+			current.Cancel()
+			break
+		case _, opened := <-current.Opened():
+			if !opened {
+				break loop
+			}
 		}
 	}
 }

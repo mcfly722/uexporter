@@ -38,13 +38,14 @@ func main() {
 	var apiServer = NewAPIServer(*bindAddrFlag, func(err error) {
 		rootContext.Log(2, err.Error())
 		logExitError(err)
-		rootContext.Terminate()
+		rootContext.Cancel()
+		rootContext.Wait()
 	})
 
 	pluginsProvider := plugins.NewPluginsFromFilesProvider(*pluginsPathFlag, "*.yaml")
 	pluginsManager := plugins.NewPluginsManager(pluginsProvider, 3, newPlugin)
 
-	apiServerContext := rootContext.NewContextFor(apiServer, *bindAddrFlag, "apiServer")
+	apiServerContext, _ := rootContext.NewContextFor(apiServer, *bindAddrFlag, "apiServer")
 	apiServerContext.NewContextFor(pluginsManager, *pluginsPathFlag, "pluginsManager")
 
 	{ // handle ctrl+c for gracefully shutdown using context
@@ -52,7 +53,7 @@ func main() {
 		go func() {
 			<-ctrlC
 			rootContext.Log(2, "CTRL+C signal")
-			rootContext.Terminate()
+			rootContext.Cancel()
 		}()
 	}
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/dop251/goja"
@@ -43,6 +44,8 @@ func (plugin *plugin) Go(current context.Context) {
 		if err != nil {
 			current.Log(1, err.Error())
 			return
+		} else {
+			current.Log(1, fmt.Sprintf("%v loaded", resource))
 		}
 		scripts = append(scripts, newScript(resource, string(*body)))
 	}
@@ -57,11 +60,14 @@ loop:
 		select {
 		case <-time.After(1 * time.Second):
 			if plugin.definition.Outdated() {
-				break loop
+				current.Cancel()
+				break
 			}
 			break
-		case <-current.OnDone():
-			break loop
+		case _, opened := <-current.Opened():
+			if !opened {
+				break loop
+			}
 		}
 	}
 }

@@ -64,8 +64,10 @@ func (eventLoop *eventLoop) Go(current context.Context) {
 loop:
 	for {
 		select {
-		case <-current.OnDone():
-			break loop
+		case _, opened := <-current.Opened():
+			if !opened {
+				break loop
+			}
 		}
 	}
 }
