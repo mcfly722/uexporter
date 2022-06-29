@@ -6,6 +6,7 @@ import (
 
 	"github.com/dop251/goja"
 	"github.com/mcfly722/goPackages/context"
+	"github.com/mcfly722/goPackages/jsEngine"
 	"github.com/mcfly722/goPackages/plugins"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -37,7 +38,7 @@ func (plugin *plugin) Go(current context.Context) {
 		return
 	}
 
-	scripts := []*script{}
+	scripts := []jsEngine.Script{}
 
 	for _, resource := range config.JSScripts {
 		body, err := plugin.definition.GetResource(resource)
@@ -45,13 +46,13 @@ func (plugin *plugin) Go(current context.Context) {
 			current.Log(1, err.Error())
 			return
 		}
-		scripts = append(scripts, newScript(resource, string(*body)))
+		scripts = append(scripts, jsEngine.NewScript(resource, string(*body)))
 		current.Log(101, fmt.Sprintf("%v loaded", resource))
 	}
 
-	eventLoop := newEventLoop(goja.New(), scripts)
-	eventLoop.addAPI(apiConsole)
-	eventLoop.addAPI(apiScheduler)
+	eventLoop := jsEngine.NewEventLoop(goja.New(), scripts)
+	eventLoop.AddAPI(jsEngine.APIConsole)
+	eventLoop.AddAPI(jsEngine.APIScheduler)
 
 	_, err = current.NewContextFor(eventLoop, config.PluginName, "eventLoop")
 	if err != nil {
