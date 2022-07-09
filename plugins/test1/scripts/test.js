@@ -1,9 +1,9 @@
 
-timerId1 = setInterval(function(){
-	console.log("timer1")
-},1000)
+var ticker = Scheduler.NewTicker(1*1000, function(){
+	Console.Log("timer1")
+}).Start()
 
-console.log("timer with id=" + timerId1 + " initialized")
+Console.Log("timer started")
 
 
 /*

@@ -1,4 +1,4 @@
-PluginName: Test1
+PluginName: Test2
 Version: 3.0
 JSScripts:
   - scripts\test.js
