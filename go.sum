@@ -23,6 +23,8 @@ github.com/mcfly722/goPackages/context v0.0.0-20220626121949-38712136951f h1:C3V
 github.com/mcfly722/goPackages/context v0.0.0-20220626121949-38712136951f/go.mod h1:i38+RCkeReJo5SgIE5Le8fJZHCwp7QgnZic9yrUMFJY=
 github.com/mcfly722/goPackages/jsEngine v0.0.0-20220709212919-e94802412e22 h1:jJdZG29qiWGDgeBOz2DI8ycJF0RsS7AY7OXeZT+XERA=
 github.com/mcfly722/goPackages/jsEngine v0.0.0-20220709212919-e94802412e22/go.mod h1:r3YVsjmbn8UU6QFAX+DtSAaCx1as5ffLEbObQzqXVoI=
+github.com/mcfly722/goPackages/jsEngine v0.0.0-20220709214858-9b64b3501881 h1:EBufB13Qz0G/4mCl4SjNyy6I9QtVynLHbbio83ssIIc=
+github.com/mcfly722/goPackages/jsEngine v0.0.0-20220709214858-9b64b3501881/go.mod h1:r3YVsjmbn8UU6QFAX+DtSAaCx1as5ffLEbObQzqXVoI=
 github.com/mcfly722/goPackages/plugins v0.0.0-20220626121949-38712136951f h1:Or3PB3P8Nb2ZYRMHXu3fuT6U9GGmWx7yBJ8iP6s3Iv0=
 github.com/mcfly722/goPackages/plugins v0.0.0-20220626121949-38712136951f/go.mod h1:v6U8DXux4ISuG4osNAJgyJAMvK8VItIycgI7uLFFusE=
 github.com/rogpeppe/go-internal v1.6.1 h1:/FiVV8dS/e+YqF2JvO3yXRFbBLTIuSDkuC7aBOAvL+k=
