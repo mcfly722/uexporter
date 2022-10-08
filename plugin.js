@@ -1,20 +1,19 @@
 
-var ticker = Scheduler.NewTicker(1*1000, function(){
+var output = ""
 
+var ticker = Scheduler.NewTicker(3*1000, function(){
 
-	Console.Log("exec!")
-
-	var output = ""
 
 	function onStdout(content){
-		  output+=content+'\r\n'
+		output += content+"\n"
+		UExporter.Publish(output)
 	}
 
-	function onDone(content){
-		Console.Log("content="+output)
+	function onDone(exitCode){
 	}
 
 	Exec.NewCommand("ping.exe", ["-n","2", "localhost"]).SetTimeoutMs(900).SetOnStdoutString(onStdout).SetOnDone(onDone).Start()
+
 
 }).Start()
 
