@@ -4,8 +4,11 @@ import (
 	originalContext "context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
+	"sort"
 	"strings"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/mcfly722/goPackages/context"
@@ -21,6 +24,9 @@ type httpServer struct {
 	onErrorHandler     OnErrorHandler
 	userName           string
 	passwordSHA256Hash string
+
+	content map[string]string
+	ready   sync.Mutex
 }
 
 func (httpServer *httpServer) isAuthenticated(username string, password string) bool {
@@ -47,6 +53,7 @@ func newHTTPServer(bindAddr string, onErrorHandler OnErrorHandler, userName stri
 		onErrorHandler:     onErrorHandler,
 		userName:           userName,
 		passwordSHA256Hash: strings.ToLower(passwordSHA256Hash),
+		content:            make(map[string]string),
 	}
 
 	return server
@@ -55,7 +62,10 @@ func newHTTPServer(bindAddr string, onErrorHandler OnErrorHandler, userName stri
 // Go ...
 func (httpServer *httpServer) Go(current context.Context) {
 
+	httpServer.router.HandleFunc("/", httpServer.getHTTPHandler())
+
 	go func() {
+
 		if err := httpServer.httpServer.ListenAndServe(); err != nil {
 			if err != http.ErrServerClosed {
 				httpServer.error <- err
@@ -76,4 +86,51 @@ loop:
 		}
 	}
 	httpServer.httpServer.Shutdown(originalContext.Background())
+}
+
+func (httpServer *httpServer) getHTTPHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		username, password, ok := r.BasicAuth()
+
+		if !ok {
+			w.Header().Add("WWW-Authenticate", `Basic realm="Give username and password"`)
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"message": "No basic auth present"}`))
+			return
+		}
+
+		if !httpServer.isAuthenticated(username, password) {
+			w.Header().Add("WWW-Authenticate", `Basic realm="Give username and password"`)
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"message": "Invalid username or password"}`))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "text/plain")
+
+		{ // write content from content map, sort it by key name
+			httpServer.ready.Lock()
+			keys := make([]string, 0, len(httpServer.content))
+			for k := range httpServer.content {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+
+			for _, key := range keys {
+				w.Write([]byte(fmt.Sprintf("# %v\n%v\n\n", key, httpServer.content[key])))
+			}
+			httpServer.ready.Unlock()
+		}
+
+		return
+	}
+
+}
+
+func (httpServer *httpServer) publish(name, body string) {
+	httpServer.ready.Lock()
+	httpServer.content[name] = body
+	httpServer.ready.Unlock()
 }

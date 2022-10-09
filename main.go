@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 
 	"github.com/dop251/goja"
 	"github.com/mcfly722/goPackages/context"
@@ -15,7 +16,7 @@ import (
 
 var (
 	bindAddrFlag           *string
-	pluginFlag             *string
+	pluginsFlag            *string
 	passwordSHA256hashFlag *string
 	userNameFlag           *string
 
@@ -31,10 +32,9 @@ func logExitError(err error) {
 
 func main() {
 	var passwordHash string
-	var pluginContent string
 
 	bindAddrFlag = flag.String("bindAddr", ":8080", "bind address")
-	pluginFlag = flag.String("plugin", "plugin.js", "JavaScript plugin")
+	pluginsFlag = flag.String("plugins", "topMem.js,plugin.js", "JavaScript plugins. Use ',' do delimit files")
 	passwordSHA256hashFlag = flag.String("passwordSHA256hash", "", "password sha256 hash")
 	userNameFlag = flag.String("username", "uexporter", "user name")
 
@@ -52,14 +52,20 @@ func main() {
 		}
 	}
 
-	{ // read plugin content
-		content, err := ioutil.ReadFile(*pluginFlag)
-		if err != nil {
-			log.Fatal(err)
-		}
-		pluginContent = string(content)
+	scripts := map[string]jsEngine.Script{}
+	{ // read all scripts
 
-		//fmt.Println(pluginContent)
+		pluginsFileNames := strings.Split(*pluginsFlag, ",")
+
+		for _, pluginName := range pluginsFileNames {
+
+			content, err := ioutil.ReadFile(pluginName)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			scripts[pluginName] = jsEngine.NewScript(pluginName, string(content))
+		}
 	}
 
 	ctrlC := make(chan os.Signal, 1)
@@ -75,19 +81,19 @@ func main() {
 	_, err := rootContext.NewContextFor(httpServer, *bindAddrFlag, "apiServer")
 	if err == nil {
 
-		{ // starting JavaScript plugin EventLoop
-			scripts := []jsEngine.Script{jsEngine.NewScript(*pluginFlag, pluginContent)}
-			eventLoop := jsEngine.NewEventLoop(goja.New(), scripts)
+		for name, script := range scripts {
+			eventLoop := jsEngine.NewEventLoop(goja.New(), []jsEngine.Script{script})
 
 			eventLoop.Import(jsEngine.Console{})
 			eventLoop.Import(jsEngine.Scheduler{})
 			eventLoop.Import(jsEngine.Exec{})
-			eventLoop.Import(UExporter{httpServer: httpServer})
+			eventLoop.Import(UExporter{httpServer: httpServer, name: name})
 
-			_, err := rootContext.NewContextFor(eventLoop, *pluginFlag, "eventLoop")
+			_, err := rootContext.NewContextFor(eventLoop, name, "eventLoop")
 			if err != nil {
 				log.Fatal(err)
 			}
+
 		}
 
 		{ // handle ctrl+c for gracefully shutdown using context
