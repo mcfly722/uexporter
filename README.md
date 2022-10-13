@@ -9,3 +9,13 @@ For parsing used JavaScript engine with own API.
 ```
 go run .
 ```
+### build
+```
+docker login
+```
+```
+docker build -t mcfly722/uexporter .
+```
+```
+docker push mcfly722/uexporter
+```
