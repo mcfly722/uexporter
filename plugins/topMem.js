@@ -89,6 +89,6 @@ var ticker = Scheduler.NewTicker(11*1000, function(){
     output = ""
   }
 
-  Exec.NewCommand("cmd.exe", ["/c","type", "..\\top.txt"]).SetTimeoutMs(900).SetOnStdoutString(onStdout).SetOnDone(onDone).Start()
+  Exec.NewCommand("top", ["-b","-n", "1"]).SetTimeoutMs(900).SetOnStdoutString(onStdout).SetOnDone(onDone).Start()
 
 }).Start()
