@@ -3,12 +3,12 @@ package main
 import (
 	originalContext "context"
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"net/http"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/mcfly722/goPackages/context"
@@ -24,25 +24,26 @@ type httpServer struct {
 	onErrorHandler     OnErrorHandler
 	userName           string
 	passwordSHA256Hash string
+	hostName           string
 
 	content map[string]string
 	ready   sync.Mutex
 }
 
 func (httpServer *httpServer) isAuthenticated(username string, password string) bool {
+
 	if username != httpServer.userName {
 		return false
 	}
-	h := sha256.New()
-	h.Write([]byte(password))
 
-	hash := hex.EncodeToString(h.Sum(nil))
+	hash1 := fmt.Sprintf("%x", sha256.Sum256([]byte(password)))                      // original one hash
+	hash2 := fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%v\n", password)))) // this hash with additional \n symbol, when you using "echo ... | sha256sum" this symbol added automatically
 
-	return hash == httpServer.passwordSHA256Hash
+	return hash1 == httpServer.passwordSHA256Hash || hash2 == httpServer.passwordSHA256Hash
 }
 
 // newHTTPServer ...
-func newHTTPServer(bindAddr string, onErrorHandler OnErrorHandler, userName string, passwordSHA256Hash string) *httpServer {
+func newHTTPServer(bindAddr string, onErrorHandler OnErrorHandler, userName string, passwordSHA256Hash string, hostName string) *httpServer {
 
 	router := mux.NewRouter()
 
@@ -54,6 +55,7 @@ func newHTTPServer(bindAddr string, onErrorHandler OnErrorHandler, userName stri
 		userName:           userName,
 		passwordSHA256Hash: strings.ToLower(passwordSHA256Hash),
 		content:            make(map[string]string),
+		hostName:           hostName,
 	}
 
 	return server
@@ -94,16 +96,16 @@ func (httpServer *httpServer) getHTTPHandler() http.HandlerFunc {
 		username, password, ok := r.BasicAuth()
 
 		if !ok {
-			w.Header().Add("WWW-Authenticate", `Basic realm="Give username and password"`)
+			w.Header().Add("WWW-Authenticate", fmt.Sprintf(`Basic realm="%v: Give username and password"`, httpServer.hostName))
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte(`{"message": "No basic auth present"}`))
 			return
 		}
 
 		if !httpServer.isAuthenticated(username, password) {
-			w.Header().Add("WWW-Authenticate", `Basic realm="Give username and password"`)
+			w.Header().Add("WWW-Authenticate", fmt.Sprintf(`Basic realm="%v: Give username and password"`, httpServer.hostName))
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"message": "Invalid username or password"}`))
+			w.Write([]byte(fmt.Sprintf(`{"message": "Invalid username or password", server:"%v"}`, httpServer.hostName)))
 			return
 		}
 
@@ -117,6 +119,8 @@ func (httpServer *httpServer) getHTTPHandler() http.HandlerFunc {
 				keys = append(keys, k)
 			}
 			sort.Strings(keys)
+
+			w.Write([]byte(fmt.Sprintf("# host: %v\n# time: %v\n\n", httpServer.hostName, time.Now())))
 
 			for _, key := range keys {
 				w.Write([]byte(fmt.Sprintf("# %v\n%v\n\n", key, httpServer.content[key])))

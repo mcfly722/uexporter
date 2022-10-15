@@ -52,6 +52,11 @@ func main() {
 		}
 	}
 
+	hostName, err := os.Hostname()
+	if err != nil {
+		panic(err)
+	}
+
 	scripts := map[string]jsEngine.Script{}
 	{ // read all scripts
 
@@ -76,9 +81,9 @@ func main() {
 		rootContext.Log(2, err.Error())
 		logExitError(err)
 		rootContext.Cancel()
-	}, *userNameFlag, passwordHash)
+	}, *userNameFlag, passwordHash, hostName)
 
-	_, err := rootContext.NewContextFor(httpServer, *bindAddrFlag, "apiServer")
+	_, err = rootContext.NewContextFor(httpServer, *bindAddrFlag, "apiServer")
 	if err == nil {
 
 		for name, script := range scripts {
