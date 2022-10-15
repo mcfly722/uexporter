@@ -57,7 +57,7 @@ function getAllProcesses(){
   return processes
 }
 
-var ticker = Scheduler.NewTicker(1000, function(){
+var ticker = Scheduler.NewTicker(3011, function(){
 
   try {
 
@@ -73,7 +73,6 @@ var ticker = Scheduler.NewTicker(1000, function(){
         return 'process_mem_rss_kb{pid="'+process.Pid+'",name="'+process.Name+'",host="'+hostname+'"} '+ToNumber(process.VmRSS)
       })
       out += firstNSortedAndFiltered.join("\n")+"\n"
-
     }
 
     { // get all others
