@@ -5,6 +5,13 @@
 
 Universal Exporter is Prometheus client service that runs and parse commands by schedule.<br>
 For parsing used JavaScript engine with own API.
+### generate hash
+```
+echo -n somePassword | sha256sum
+```
+
+
+### run
 
 ```
 go run .
