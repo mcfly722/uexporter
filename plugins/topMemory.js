@@ -16,6 +16,12 @@ function sum(array) {
   return total;
 }
 
+var hostname = OS.Getenv("UEXPORTER_HOST_NAME")
+if (!hostname) {
+  hostname = IOUtil.ReadAll(procPath + "/sys/kernel/hostname").trim()
+}
+
+
 function parseProcStatus(content){
   var result = {}
 
@@ -29,12 +35,9 @@ function parseProcStatus(content){
 }
 
 function ToNumber(str) {
-  if (str.endsWith('kB')) {
-    return Math.round(Number(str.replace(/[^0-9\.]+/,"")))
-  }
-  return Math.round(Number(str))
+  var n = (str ?? "0").replace(/[^0-9\.]+/,"")
+  return Math.round(Number(n))
 }
-
 
 function getAllProcesses(){
 
@@ -54,7 +57,7 @@ function getAllProcesses(){
   return processes
 }
 
-var ticker = Scheduler.NewTicker(3*1000, function(){
+var ticker = Scheduler.NewTicker(1000, function(){
 
   try {
 
@@ -62,11 +65,12 @@ var ticker = Scheduler.NewTicker(3*1000, function(){
 
     var processes = getAllProcesses()
 
+
     { // sort by RSS firstN
       var sorted = processes.sort((p1,p2) => (ToNumber(p1.VmRSS) < ToNumber(p2.VmRSS) ? 1:-1))
       var sortedAndFiltered = sorted.slice(0, firstN)
       var firstNSortedAndFiltered = sortedAndFiltered.map(process =>{
-        return 'process_mem_rss_kb{pid="'+process.Pid+'",name="'+process.Name+'"} '+ToNumber(process.VmRSS)
+        return 'process_mem_rss_kb{pid="'+process.Pid+'",name="'+process.Name+'",host="'+hostname+'"} '+ToNumber(process.VmRSS)
       })
       out += firstNSortedAndFiltered.join("\n")+"\n"
 
@@ -74,11 +78,10 @@ var ticker = Scheduler.NewTicker(3*1000, function(){
 
     { // get all others
       var allOthers = sorted.slice(firstN,-1).map(process => ToNumber(process.VmRSS))
-      out += 'process_mem_res_kb{pid="-1",name="allOthers"} ' + sum(allOthers)
+      out += 'process_mem_res_kb{pid="0",name="allOthers",host="'+hostname+'"} ' + sum(allOthers)
     }
 
-    //Console.Log(out)
-
+    //Console.Log("published")
     UExporter.Publish(out)
 
   } catch(e) {
@@ -86,3 +89,6 @@ var ticker = Scheduler.NewTicker(3*1000, function(){
   }
 
 }).Start()
+
+Console.Log("topMemory.js v3 started")
+Console.Log("procPath="+procPath+" hostname="+hostname)
