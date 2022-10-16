@@ -1,9 +1,13 @@
-var procPath = "/proc"
-
 var firstN = 20
 
+var procPath = "/proc"
 if (OS.Getenv("UEXPORTER_PROC_PATH") !== "") {
   procPath = OS.Getenv("UEXPORTER_PROC_PATH")
+}
+
+var hostname = OS.Getenv("UEXPORTER_HOST_NAME")
+if (!hostname) {
+  hostname = IOUtil.ReadAll(procPath + "/sys/kernel/hostname").trim()
 }
 
 function sum(array) {
@@ -14,11 +18,6 @@ function sum(array) {
     }
   }
   return total;
-}
-
-var hostname = OS.Getenv("UEXPORTER_HOST_NAME")
-if (!hostname) {
-  hostname = IOUtil.ReadAll(procPath + "/sys/kernel/hostname").trim()
 }
 
 function getUptime(){
