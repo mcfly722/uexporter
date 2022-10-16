@@ -88,6 +88,3 @@ var ticker = Scheduler.NewTicker(3011, function(){
   }
 
 }).Start()
-
-Console.Log("topMemory.js v3 started")
-Console.Log("procPath="+procPath+" hostname="+hostname)
