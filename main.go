@@ -34,7 +34,7 @@ func main() {
 	var passwordHash string
 
 	bindAddrFlag = flag.String("bindAddr", ":9100", "bind address")
-	pluginsFlag = flag.String("plugins", "plugins/topMemory.js,plugins/topCPU.js", "JavaScript plugins. Use ',' do delimit files")
+	pluginsFlag = flag.String("plugins", "plugins/topMemory.js,plugins/topCPU.js,plugins/uptime.js", "JavaScript plugins. Use ',' do delimit files")
 	passwordSHA256hashFlag = flag.String("passwordSHA256hash", "", "password sha256 hash")
 	userNameFlag = flag.String("username", "uexporter", "user name")
 
