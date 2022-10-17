@@ -1,3 +1,5 @@
+// plugin could be used from container to obtain CPU info from k8s node
+
 var firstN = 10
 
 var procPath = "/proc"
