@@ -1,3 +1,5 @@
+// plugin could be used from container to obtain CPU info from it hosting k8s node
+
 var firstN = 20
 
 var procPath = "/proc"
@@ -53,7 +55,7 @@ function getProcessesStats(){
 }
 
 
-var groupBy = function(xs, key) {
+function groupBy(xs, key) {
   return xs.reduce(function(rv, x) {
     (rv[x[key]] = rv[x[key]] || []).push(x);
     return rv;
