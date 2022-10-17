@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kubernetes-uexporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      name: kubernetes-uexporter
+  template:
+    metadata:
+      labels:
+        name: kubernetes-uexporter
+    spec:
+      tolerations:
+        - operator: Exists
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: beta.kubernetes.io/os
+                operator: NotIn
+                values:
+                - windows
+      containers:
+      - name: kubernetes-uexporter
+        image: mcfly722/uexporter:latest
+        ports:
+        - containerPort: 9100
+          hostPort: 9100
+          name: http
+          protocol: TCP
+        command:
+          - /uexporter
+        args: ["-plugins","/plugins/topMemory.js,/plugins/topCPU.js,/plugins/uptime.js","-passwordSHA256hash","<SOME SHA256 Password Hash>"]
+        env:
+        - name: UEXPORTER_PROC_PATH
+          value: /proc-node
+        - name: UEXPORTER_HOST_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        resources:
+          limits:
+            cpu: 300m
+            memory: 300Mi
+          requests:
+            cpu: 300m
+            memory: 300Mi
+        volumeMounts:
+        - mountPath: /proc-node
+          name: proc
+          readOnly: true
+      volumes:
+      - name: proc
+        hostPath:
+          path: /proc
+          type: Directory
