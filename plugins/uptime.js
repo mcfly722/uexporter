@@ -10,7 +10,7 @@ if (!hostname) {
 }
 
 function getUptime(){
-   return (IOUtil.ReadAll(procPath+"/uptime").split(" "))[0].trim()
+   return Math.round(Number((IOUtil.ReadAll(procPath+"/uptime").split(" "))[0].trim()))
 }
 
 var ticker = Scheduler.NewTicker(3109, function(){
