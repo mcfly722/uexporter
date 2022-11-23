@@ -19,6 +19,7 @@ var (
 	pluginsFlag            *string
 	passwordSHA256hashFlag *string
 	userNameFlag           *string
+	skipAuth               *bool
 
 	exitCode      int
 	exitException string
@@ -30,6 +31,16 @@ func logExitError(err error) {
 	exitException = err.Error()
 }
 
+func isFlagPassed(name string) bool {
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
+}
+
 func main() {
 	var passwordHash string
 
@@ -37,8 +48,11 @@ func main() {
 	pluginsFlag = flag.String("plugins", "plugins/topMemory.js,plugins/topCPU.js,plugins/uptime.js", "JavaScript plugins. Use ',' do delimit files")
 	passwordSHA256hashFlag = flag.String("passwordSHA256hash", "", "password sha256 hash")
 	userNameFlag = flag.String("username", "uexporter", "user name")
+	skipAuth = flag.Bool("skipAuth", false, "skip authentication")
 
 	flag.Parse()
+
+	fmt.Println(fmt.Sprintf("skipAuth=%v",*skipAuth))
 
 	{ // set passwordHash
 		if os.Getenv("UEXPORTER_PASSWORDSHA256HASH") != "" {
@@ -47,7 +61,11 @@ func main() {
 			if *passwordSHA256hashFlag != "" {
 				passwordHash = *passwordSHA256hashFlag
 			} else {
-				log.Fatal("You have to specify -passwordSHA256hash value, or UEXPORTER_PASSWORDSHA256HASH environment variable")
+				if (*skipAuth) {
+					passwordHash = ""
+					} else {
+						log.Fatal("You have to specify -passwordSHA256hash value, or UEXPORTER_PASSWORDSHA256HASH environment variable, or use -skipAuth to skip authentication")
+					}
 			}
 		}
 	}

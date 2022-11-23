@@ -32,6 +32,10 @@ type httpServer struct {
 
 func (httpServer *httpServer) isAuthenticated(username string, password string) bool {
 
+	if (httpServer.passwordSHA256Hash == "") { // -skipAuth flag specified
+		return true
+	}
+
 	if username != httpServer.userName {
 		return false
 	}
