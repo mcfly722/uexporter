@@ -52,8 +52,6 @@ func main() {
 
 	flag.Parse()
 
-	fmt.Println(fmt.Sprintf("skipAuth=%v",*skipAuth))
-
 	{ // set passwordHash
 		if os.Getenv("UEXPORTER_PASSWORDSHA256HASH") != "" {
 			passwordHash = os.Getenv("UEXPORTER_PASSWORDSHA256HASH")
