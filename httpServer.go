@@ -32,10 +32,6 @@ type httpServer struct {
 
 func (httpServer *httpServer) isAuthenticated(username string, password string) bool {
 
-	if (httpServer.passwordSHA256Hash == "") { // -skipAuth flag specified
-		return true
-	}
-
 	if username != httpServer.userName {
 		return false
 	}
@@ -97,20 +93,22 @@ loop:
 func (httpServer *httpServer) getHTTPHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		username, password, ok := r.BasicAuth()
+		if (httpServer.passwordSHA256Hash != ""){ // -skipAuth
+			username, password, ok := r.BasicAuth()
 
-		if !ok {
-			w.Header().Add("WWW-Authenticate", fmt.Sprintf(`Basic realm="%v: Give username and password"`, httpServer.hostName))
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"message": "No basic auth present"}`))
-			return
-		}
+			if !ok {
+				w.Header().Add("WWW-Authenticate", fmt.Sprintf(`Basic realm="%v: Give username and password"`, httpServer.hostName))
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"message": "No basic auth present"}`))
+				return
+			}
 
-		if !httpServer.isAuthenticated(username, password) {
-			w.Header().Add("WWW-Authenticate", fmt.Sprintf(`Basic realm="%v: Give username and password"`, httpServer.hostName))
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(fmt.Sprintf(`{"message": "Invalid username or password", server:"%v"}`, httpServer.hostName)))
-			return
+			if !httpServer.isAuthenticated(username, password) {
+				w.Header().Add("WWW-Authenticate", fmt.Sprintf(`Basic realm="%v: Give username and password"`, httpServer.hostName))
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(fmt.Sprintf(`{"message": "Invalid username or password", server:"%v"}`, httpServer.hostName)))
+				return
+			}
 		}
 
 		w.WriteHeader(http.StatusOK)

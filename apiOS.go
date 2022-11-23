@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"runtime"
 
 	"github.com/dop251/goja"
 
@@ -28,4 +29,8 @@ func (operatingSystem OperatingSystem) Constructor(context context.Context, even
 // Getenv ...
 func (operatingSystem *OperatingSystem) Getenv(name string) string {
 	return os.Getenv(name)
+}
+
+func (operatingSystem *OperatingSystem) OS() string {
+	return string(runtime.GOOS)
 }
