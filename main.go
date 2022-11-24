@@ -16,6 +16,7 @@ import (
 
 var (
 	bindAddrFlag           *string
+	pathFlag               *string
 	pluginsFlag            *string
 	passwordSHA256hashFlag *string
 	userNameFlag           *string
@@ -45,6 +46,7 @@ func main() {
 	var passwordHash string
 
 	bindAddrFlag = flag.String("bindAddr", ":9100", "bind address")
+	pathFlag = flag.String("path", "/metrics", "output content path")
 	pluginsFlag = flag.String("plugins", "plugins/topMemory.js,plugins/topCPU.js,plugins/uptime.js", "JavaScript plugins. Use ',' do delimit files")
 	passwordSHA256hashFlag = flag.String("passwordSHA256hash", "", "password sha256 hash")
 	userNameFlag = flag.String("username", "uexporter", "user name")
@@ -93,7 +95,7 @@ func main() {
 
 	rootContext := context.NewRootContext(context.NewConsoleLogDebugger(100, true))
 
-	var httpServer = newHTTPServer(*bindAddrFlag, func(err error) {
+	var httpServer = newHTTPServer(*bindAddrFlag, *pathFlag, func(err error) {
 		rootContext.Log(2, err.Error())
 		logExitError(err)
 		rootContext.Cancel()

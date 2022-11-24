@@ -24,6 +24,7 @@ type httpServer struct {
 	onErrorHandler     OnErrorHandler
 	userName           string
 	passwordSHA256Hash string
+	path               string
 	hostName           string
 
 	content map[string]string
@@ -43,7 +44,7 @@ func (httpServer *httpServer) isAuthenticated(username string, password string) 
 }
 
 // newHTTPServer ...
-func newHTTPServer(bindAddr string, onErrorHandler OnErrorHandler, userName string, passwordSHA256Hash string, hostName string) *httpServer {
+func newHTTPServer(bindAddr string, path string, onErrorHandler OnErrorHandler, userName string, passwordSHA256Hash string, hostName string) *httpServer {
 
 	router := mux.NewRouter()
 
@@ -55,6 +56,7 @@ func newHTTPServer(bindAddr string, onErrorHandler OnErrorHandler, userName stri
 		userName:           userName,
 		passwordSHA256Hash: strings.ToLower(passwordSHA256Hash),
 		content:            make(map[string]string),
+		path:               path,
 		hostName:           hostName,
 	}
 
@@ -64,7 +66,7 @@ func newHTTPServer(bindAddr string, onErrorHandler OnErrorHandler, userName stri
 // Go ...
 func (httpServer *httpServer) Go(current context.Context) {
 
-	httpServer.router.HandleFunc("/", httpServer.getHTTPHandler())
+	httpServer.router.HandleFunc(httpServer.path, httpServer.getHTTPHandler())
 
 	go func() {
 
